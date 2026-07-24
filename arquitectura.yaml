@@ -58,7 +58,7 @@ spec:
             topologyKey: "kubernetes.io/hostname"
       containers:
       - name: reservas
-        image: app-reservas:v5
+        image: app-reservas:v6
         imagePullPolicy: Never
         ports:
         - containerPort: 3000

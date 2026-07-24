@@ -2,6 +2,7 @@ import express from 'express';
 import axios from 'axios';
 import CircuitBreaker from 'opossum';
 import axiosRetry from 'axios-retry';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
 app.use(express.json());
@@ -28,11 +29,22 @@ breaker.fallback(() => ({ status: "fallo_controlado", message: "Cobro pendiente.
 
 // 3. FIRE-AND-FORGET PARA NOTIFICACIONES
 const dispararNotificacion = (asiento) => {
-    // Fíjate que NO usamos "await" aquí. Lo lanzamos en segundo plano.
     axios.post(`${NOTIFICACIONES_URL}/enviar`, { asiento })
         .then(() => console.log("📧 Confirmación: Correo procesado en segundo plano."))
-        .catch(err => console.error("⚠️ Fallo no crítico (ignorado): El correo no salió.", err.message));
+        .catch(err => console.error("⚠️ Fallo no crítico (ignorado): El correo no salió."));
 };
+
+// 4. RATE LIMITING (Protección contra Diluvio de Peticiones)
+const limitador = rateLimit({
+    windowMs: 15 * 1000, // 15 segundos
+    max: 3, // Límite de 3 peticiones por IP en esa ventana de tiempo
+    message: { error: "Demasiadas peticiones. El sistema está saturado, intenta en unos segundos." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Aplicamos el limitador SOLO a la ruta de reservas
+app.use('/reservar', limitador);
 
 // --- ORQUESTADOR ---
 app.post('/reservar', async (req, res) => {
@@ -42,7 +54,6 @@ app.post('/reservar', async (req, res) => {
         const respInventario = await axios.post(`${INVENTARIO_URL}/descontar`, { asiento: req.body.asiento });
         const detallePago = await breaker.fire(100);
         
-        // Disparamos la notificación de forma asíncrona y no esperamos a que termine
         dispararNotificacion(req.body.asiento);
         
         res.json({ 
@@ -56,4 +67,4 @@ app.post('/reservar', async (req, res) => {
     }
 });
 
-app.listen(3000, () => console.log('Servicio de Reservas blindado (CB + Retries + Fire&Forget) en puerto 3000'));
+app.listen(3000, () => console.log('Servicio de Reservas blindado (CB + Retries + F&F + RateLimit) en puerto 3000'));
