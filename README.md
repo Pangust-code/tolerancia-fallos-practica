@@ -143,3 +143,9 @@ sequenceDiagram
     Worker->>BD: INSERT Reserva (Asiento B2)
     BD-->>Worker: OK
 ```
+
+## 🎬 Parte Video: Demo en Vivo
+
+En el siguiente enlace se encuentra la demostración en video ejecutando los 4 mecanismos de resiliencia sobre la infraestructura de Kubernetes, verificando la recuperación del sistema en tiempo real.
+
+[📺 Ver Demostración del Proyecto en YouTube](https://youtu.be/FdWsF6A4w5g)
